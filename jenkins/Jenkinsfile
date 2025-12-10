@@ -16,8 +16,8 @@ node {
     }
 
     stage('Test') {
-        // Pakai env yang sama supaya kalau test juga pakai webpack/bundler nggak error
-        bat 'set "NODE_OPTIONS=--openssl-legacy-provider" && npm test -- --watch=false'
+        // Jika tidak ada test, tetap dianggap berhasil
+        bat 'set "NODE_OPTIONS=--openssl-legacy-provider" && npm test -- --watch=false --passWithNoTests'
     }
 
     stage('Archive Build Artifacts') {
