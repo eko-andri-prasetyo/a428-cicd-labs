@@ -8,7 +8,7 @@ node {
 
     stage('Install Dependencies') {
         // Pastikan Node.js + npm sudah ter-install di Windows dan PATH-nya benar
-        bat 'npm ci'
+        bat 'npm install'
     }
 
     stage('Build') {
