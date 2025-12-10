@@ -1,27 +1,26 @@
-// Scripted Pipeline untuk React App - Windows (npm di host)
+// Scripted Pipeline untuk React App - Windows
 
 node {
     stage('Checkout') {
-        // Ambil kode dari SCM (GitHub) menggunakan konfigurasi di job Jenkins
         checkout scm
     }
 
     stage('Install Dependencies') {
-        // Pastikan Node.js + npm sudah ter-install di Windows dan PATH-nya benar
+        // gunakan npm install karena tidak ada package-lock.json
         bat 'npm install'
     }
 
     stage('Build') {
-        bat 'npm run build'
+        // Fix error: ERR_OSSL_EVP_UNSUPPORTED dengan openssl-legacy-provider
+        bat 'set "NODE_OPTIONS=--openssl-legacy-provider" && npm run build'
     }
 
     stage('Test') {
-        // --watch=false supaya nggak nyangkut
-        bat 'npm test -- --watch=false'
+        // Pakai env yang sama supaya kalau test juga pakai webpack/bundler nggak error
+        bat 'set "NODE_OPTIONS=--openssl-legacy-provider" && npm test -- --watch=false'
     }
 
     stage('Archive Build Artifacts') {
-        // Arsipkan hasil build untuk dilihat di Artifacts
         archiveArtifacts artifacts: 'build/**/*', fingerprint: true
     }
 }
