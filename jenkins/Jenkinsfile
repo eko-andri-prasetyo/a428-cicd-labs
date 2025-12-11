@@ -1,11 +1,12 @@
-// Jenkinsfile - Proyek Akhir CI/CD (React App, Windows agent, scripted pipeline)
+// Jenkinsfile - Proyek Akhir CI/CD (React App, Windows, Scripted Pipeline)
 
 node {
 
     stage('Checkout') {
+        // Ambil source code dari SCM (branch react-app)
         checkout scm
 
-        // bersihkan log lama
+        // Bersihkan log lama kalau ada
         bat 'del pipeline.log 2>nul'
     }
 
@@ -31,12 +32,10 @@ echo ===== TEST =====>> pipeline.log
 set "NODE_OPTIONS=--openssl-legacy-provider"
 npm test -- --watch=false --passWithNoTests >> pipeline.log 2>&1
 '''
-        // kalau mau, bisa tambah junit parsing di sini kalau ada report
     }
 
     stage('Manual Approval') {
-        // Kriteria 4: manual approval sebelum Deploy
-        // Munculkan pertanyaan: "Lanjutkan ke tahap Deploy?"
+        // Kriteria 4: Manual Approval sebelum Deploy
         timeout(time: 10, unit: 'MINUTES') {
             def userInput = input(
                 id: 'ProceedToDeploy',
@@ -57,40 +56,39 @@ npm test -- --watch=false --passWithNoTests >> pipeline.log 2>&1
     }
 
     stage('Deploy') {
-        // Kriteria 2 & 3: Deploy + app jalan 1 menit, lalu berhenti otomatis
-        // Di sini contoh sederhana: jalankan React dev server, diam 60 detik, lalu kill.
+        // Kriteria 2 & 3:
+        // - Deploy aplikasi (serve build React)
+        // - Biarkan hidup 60 detik
+        // - Matikan lagi, pipeline tetap SUCCESS
 
-        // Pastikan tidak ada proses lama yang masih jalan
-        // (opsional, tergantung cara sebelumnya deploy)
         bat '''
 echo ===== DEPLOY (START) =====>> pipeline.log
 
-REM Menjalankan aplikasi React (contoh: npm start) di background menggunakan start
-start "react-app" cmd /c "set NODE_OPTIONS=--openssl-legacy-provider && npm start"
+REM Pastikan package serve terpasang (kalau sudah, perintah ini akan cepat)
+call npm install -g serve >> pipeline.log 2>&1
 
-echo Aplikasi berjalan. Menunggu 60 detik...>> pipeline.log
-timeout /t 60 /nobreak >nul
+REM Pindah ke workspace Jenkins
+cd /d %WORKSPACE%
+
+REM Jalankan aplikasi React dari folder build di background di port 3000
+start "react-serve" cmd /c "serve -s build -l 3000"
+
+echo Aplikasi berjalan di http://localhost:3000 . Menunggu 60 detik...>> pipeline.log
+
+REM Tunggu 60 detik (pakai PowerShell biar nggak error di Jenkins)
+powershell -Command "Start-Sleep -Seconds 60"
 
 echo 60 detik selesai, menghentikan aplikasi...>> pipeline.log
 
-REM (opsional) coba hentikan proses node/npm yang berjalan di port 3000
-REM Misal pakai npx kill-port 3000 jika tersedia:
-REM npx kill-port 3000
+REM Hentikan proses node (server serve)
+taskkill /F /IM node.exe >nul 2>&1
 
 echo ===== DEPLOY (END) =====>> pipeline.log
 '''
-
-        // Catatan:
-        // - Karena di requirement: "gunakan perintah sleep", di Windows ekivalennya timeout /t 60.
-        // - Kalau nanti Jenkins jalan di Linux (Docker), ganti block di atas jadi:
-        //   sh '''
-        //   npm start &
-        //   sleep 60
-        //   pkill -f "npm start" || true
-        //   '''
     }
 
     stage('Archive Build Artifacts') {
+        // Arsipkan build + pipeline.log untuk dikirim ke Dicoding (log.txt)
         archiveArtifacts artifacts: 'build/**/*,pipeline.log', fingerprint: true
     }
 }
