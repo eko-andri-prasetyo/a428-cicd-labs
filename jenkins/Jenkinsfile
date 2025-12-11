@@ -57,30 +57,27 @@ npm test -- --watch=false --passWithNoTests >> pipeline.log 2>&1
 
     stage('Deploy') {
         // Kriteria 2 & 3:
-        // - Deploy aplikasi (serve build React)
+        // - Deploy aplikasi (npm start)
         // - Biarkan hidup 60 detik
         // - Matikan lagi, pipeline tetap SUCCESS
 
         bat '''
 echo ===== DEPLOY (START) =====>> pipeline.log
 
-REM Pastikan package serve terpasang (kalau sudah, perintah ini akan cepat)
-call npm install -g serve >> pipeline.log 2>&1
-
 REM Pindah ke workspace Jenkins
 cd /d %WORKSPACE%
 
-REM Jalankan aplikasi React dari folder build di background di port 3000
-start "react-serve" cmd /c "serve -s build -l 3000"
+REM Jalankan React dev server di background (port 3000)
+start "react-app" cmd /c "set NODE_OPTIONS=--openssl-legacy-provider && npm start"
 
 echo Aplikasi berjalan di http://localhost:3000 . Menunggu 60 detik...>> pipeline.log
 
-REM Tunggu 60 detik (pakai PowerShell biar nggak error di Jenkins)
+REM Tunggu 60 detik (pakai PowerShell supaya tidak error di Jenkins)
 powershell -Command "Start-Sleep -Seconds 60"
 
 echo 60 detik selesai, menghentikan aplikasi...>> pipeline.log
 
-REM Hentikan proses node (server serve)
+REM Hentikan proses node (server React)
 taskkill /F /IM node.exe >nul 2>&1
 
 echo ===== DEPLOY (END) =====>> pipeline.log
